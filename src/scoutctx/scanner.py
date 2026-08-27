@@ -11,6 +11,7 @@ from .models import Candidate, ScanStats
 
 DEFAULT_EXCLUDES = (
     ".git/**",
+    ".scoutctx/**",
     ".hg/**",
     ".svn/**",
     ".venv/**",

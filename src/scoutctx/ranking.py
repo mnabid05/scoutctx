@@ -16,11 +16,16 @@ STOP_WORDS = {
 }
 ANCHORS = {
     "agents.md": 5.0,
+    "codeowners": 4.5,
+    "catalog-info.yaml": 4.0,
+    "catalog-info.yml": 4.0,
     "readme.md": 3.0,
+    "architecture.md": 3.0,
     "pyproject.toml": 2.5,
     "package.json": 2.5,
     "cargo.toml": 2.5,
     "go.mod": 2.5,
+    "mkdocs.yml": 2.0,
     "dockerfile": 1.5,
     "makefile": 1.5,
 }
@@ -125,4 +130,3 @@ def excerpt(content: str, terms: list[str], limit: int) -> tuple[str, bool]:
         chunks.append(chunk)
         used += len(chunk) + 2
     return "\n\n".join(chunks).rstrip() + "\n… [truncated]", True
-

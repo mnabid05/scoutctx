@@ -6,11 +6,12 @@ Thanks for helping make coding-agent context smaller, safer, and more useful.
 
 For a significant feature, open an issue first so the approach can be discussed. Bug fixes and documentation improvements are welcome as direct pull requests.
 
-ScoutCTX has three product constraints:
+ScoutCTX has four product constraints:
 
-1. Repository content stays local.
+1. The core makes no outbound model or network calls.
 2. Ranking and selection remain explainable and deterministic.
-3. The CLI keeps zero runtime dependencies.
+3. CLI, framework, sessions, and built-in adapters keep zero runtime dependencies.
+4. Context and session contracts remain model and harness neutral.
 
 ## Local setup
 
@@ -34,4 +35,3 @@ On Windows PowerShell, activate the environment with `.venv\Scripts\Activate.ps1
 - Confirm that generated briefs contain no timestamps or absolute paths.
 
 By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
-

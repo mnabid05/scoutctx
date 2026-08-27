@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="assets/hero.svg" alt="ScoutCTX — signal for your coding agent" width="100%" />
+  <img src="assets/hero.svg" alt="ScoutCTX — the open context plane for coding agents" width="100%" />
 
-  <p><strong>Give your coding agent the right files, not the whole repository.</strong></p>
+  <p><strong>One task. Any model. Context that survives the switch.</strong></p>
 
   <p>
     <a href="https://github.com/mnabid05/scoutctx/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/mnabid05/scoutctx/ci.yml?branch=main&style=flat-square&label=tests"></a>
@@ -11,31 +11,47 @@
   </p>
 </div>
 
-ScoutCTX is a local-first CLI that ranks repository files against your task, fits the useful parts into a token budget, and produces a portable brief for Codex, Claude Code, Cursor, Copilot, or any other coding agent.
+ScoutCTX is an open-source context and session framework for coding agents. It
+turns a task, a repository, Git state, team knowledge, and durable notes into a
+small context package that any model or harness can consume.
+
+It does **not** call a model. It gives models the right context through a Python
+API, CLI, local HTTP endpoint, or MCP tools.
 
 ```bash
-scoutctx "fix the flaky OAuth callback tests" --output context.md
+# Create an isolated task session and Git worktree.
+scoutctx session start "replace polling with event delivery"
+
+# Run any installed agent with the generated context.
+scoutctx session run replace-polling-with-event-delivery-01 -- \
+  my-agent --context-file '{context}'
+
+# Add a handoff fact, then continue with another model or harness.
+scoutctx session note replace-polling-with-event-delivery-01 \
+  "Keep the public events import path stable."
+scoutctx session run replace-polling-with-event-delivery-01 -- \
+  another-agent --context-file '{context}'
 ```
 
-No model calls. No embeddings. No account. Your code never leaves your machine.
+The worktree, task, notes, harness history, and regenerated repository context
+belong to the session—not to the first model that touched it.
 
-## Why ScoutCTX?
+## Why people build on it
 
-Coding agents are only as good as the context they receive. Sending an entire repository wastes tokens and buries the files that matter; hand-picking files becomes its own chore.
+- **Model-neutral:** plain Markdown/JSON plus CLI, Python, HTTP, and MCP surfaces.
+- **Session-native:** deterministic task IDs, shared notes, archiveable state,
+  and optional Git worktrees for concurrent agents.
+- **Context-provider API:** add architecture decisions, ownership, runbooks, or
+  internal docs without coupling the core to a catalog vendor.
+- **Transparent retrieval:** lexical scores explain path, content, Git, and
+  project-anchor signals; no opaque index is required.
+- **Budget-aware:** large files become relevant line windows instead of eating
+  the entire model window.
+- **Safe baseline:** redaction on by default, bounded reads, binary filtering,
+  symlink exclusion, root-confined servers, and no shell-based harness launch.
+- **Small enough to audit:** Python 3.11+, standard library only at runtime.
 
-ScoutCTX turns a task into a compact, reviewable context pack:
-
-- **Task-aware:** explains why each selected file ranked highly.
-- **Git-aware:** boosts files in the current working set and honors `.gitignore`.
-- **Budget-aware:** extracts relevant windows from large files instead of blindly truncating the bundle.
-- **Secret-aware:** redacts common credentials, private keys, and tokens by default.
-- **Prompt-injection-aware:** labels repository text as untrusted data in every Markdown brief.
-- **Agent-agnostic:** emits plain Markdown or versioned JSON.
-- **Fast and offline:** uses the Python standard library and Git—nothing else at runtime.
-
-## Quick start
-
-Install directly from GitHub with your preferred tool:
+## Install
 
 ```bash
 pipx install git+https://github.com/mnabid05/scoutctx.git
@@ -43,71 +59,139 @@ pipx install git+https://github.com/mnabid05/scoutctx.git
 uv tool install git+https://github.com/mnabid05/scoutctx.git
 ```
 
-Then scout from any repository:
+## Three ways to use ScoutCTX
+
+### 1. Build context now
 
 ```bash
 cd your-project
-scoutctx "add rate limiting to the public API" --output context.md
+scoutctx build "fix the flaky OAuth callback tests" \
+  --budget 6000 \
+  --output context.md
 ```
 
-Attach `context.md` to your agent, paste it into a chat, or pipe it into another tool. ScoutCTX also works well as a quick orientation pass:
+The original shorthand still works:
 
 ```bash
-scoutctx | less
+scoutctx "trace duplicate webhook delivery" --format json --output context.json
 ```
 
-## What the brief contains
+### 2. Keep a portable agent session
+
+```bash
+scoutctx session start "add cancellation to the import worker"
+scoutctx session list
+scoutctx session context add-cancellation-to-the-import-worker-01 --budget 6000
+scoutctx session run --dry-run add-cancellation-to-the-import-worker-01 -- \
+  local-agent --prompt '{context}'
+scoutctx session archive add-cancellation-to-the-import-worker-01
+```
+
+By default a Git-backed session creates branch `scoutctx/<session-id>` and a
+linked worktree under `.scoutctx/worktrees/`. Pass `--no-worktree` for a
+read-only/non-Git workflow. See [the session guide](docs/sessions.md).
+
+### 3. Connect a model or orchestration framework
+
+Python:
+
+```python
+from scoutctx import ScoutCTX
+
+scout = ScoutCTX("/path/to/repository", budget=6_000)
+context = scout.context("repair token refresh")
+
+answer = model.generate(
+    task="repair token refresh",
+    repository_context=context.content,
+)
+```
+
+MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "scoutctx": {
+      "command": "scoutctx",
+      "args": ["mcp", "--root", "/path/to/repository"]
+    }
+  }
+}
+```
+
+The MCP server exposes:
+
+- `scout_context` for a fresh task-focused package; and
+- `scout_session_context` for a persistent session with notes and harness
+  continuity.
+
+For language-independent integrations:
+
+```bash
+scoutctx serve --root /path/to/repository --host 127.0.0.1 --port 8765
+
+curl --fail-with-body http://127.0.0.1:8765/v1/context \
+  -H 'Content-Type: application/json' \
+  -d '{"task":"trace duplicate webhook delivery","budget":5000}'
+```
+
+The development HTTP server has no authentication or TLS and should stay on
+loopback. Both adapters confine requested roots beneath the root configured by
+their launcher.
+
+See [integration recipes](docs/integrations.md) for LangGraph, custom model
+SDKs, providers, MCP, and HTTP.
+
+## Add organizational context
+
+Applications can register deterministic providers for architecture decisions,
+ownership, team docs, or policies:
+
+```python
+from scoutctx import ScoutCTX
+from scoutctx.providers import DirectoryProvider, ProviderRegistry
+
+providers = ProviderRegistry({
+    "decisions": DirectoryProvider(
+        "docs/decisions",
+        globs=("**/*.md",),
+        source="architecture",
+        weight=10,
+    )
+})
+
+scout = ScoutCTX("/path/to/repository", providers=providers)
+result = scout.context("change the refresh-token policy")
+```
+
+Provider failures are isolated. Documents are deterministically ordered,
+bounded, excerpted, and redacted before they join the repository context.
+
+## How it fits together
 
 ```text
-ScoutCTX brief
-├── task and token budget
-├── compact repository map
-├── current Git working set
-└── ranked file excerpts
-    ├── score
-    ├── selection reasons
-    └── task-centered content
+repository + Git + task + notes + provider documents
+                         |
+             scan -> rank -> excerpt -> redact
+                         |
+             ContextResult (Markdown or JSON)
+                /          |          \
+             Python       HTTP        MCP
+                \          |          /
+                   any model or harness
+                            |
+                    session worktree
 ```
 
-Selection is intentionally transparent. A file might say `changed in Git; path: auth; content: callback`, so you can see why it made the cut instead of trusting a black box.
+The model-free core owns selection. Transports stay thin, and harnesses keep
+their own credentials, permission model, tool loop, and provider SDK. Read the
+[architecture guide](docs/xirp-style-architecture.md) for the implemented
+boundaries and honest roadmap.
 
-## Useful recipes
+## Configuration
 
-### Fit a smaller context window
-
-```bash
-scoutctx "trace the payment webhook" --budget 4000
-```
-
-### Focus on a package
-
-```bash
-scoutctx "remove the deprecated API" --include "packages/core/**"
-```
-
-### Leave out generated or noisy files
-
-```bash
-scoutctx "simplify the dashboard" \
-  --exclude "**/*.generated.ts" \
-  --exclude "apps/legacy/**"
-```
-
-### Feed structured context to another tool
-
-```bash
-scoutctx "review session handling" --format json --output context.json
-```
-
-### Scan a directory without Git
-
-```bash
-scoutctx "understand this prototype" --no-git --root ../prototype
-```
-
-## Project configuration
-
-Run `scoutctx init` to create a documented `.scoutctx.toml`:
+`scoutctx init` creates `.scoutctx.toml`:
 
 ```toml
 [scoutctx]
@@ -120,25 +204,18 @@ include = []
 exclude = ["*.min.js", "*.map", "coverage/**", "fixtures/**"]
 ```
 
-For project-specific exclusions, add a `.scoutctxignore` file. Command-line flags extend the configured `include` and `exclude` lists.
+Use `.scoutctxignore` for project filters. CLI include/exclude flags extend the
+configured lists. The local `.scoutctx/` session store is excluded from scans
+by default so a generated snapshot never feeds itself back into the next one.
 
-## How ranking works
+## Security model
 
-ScoutCTX uses a small, deterministic scoring pipeline:
+Repository and provider text is untrusted data. ScoutCTX labels it accordingly,
+but redaction is a safety net rather than a proof that context is safe to share.
+Review outbound packages for sensitive projects. A launched harness runs with
+your OS permissions; a Git worktree isolates files and indexes, not processes.
 
-1. Extract meaningful terms from the task.
-2. Score path matches, content matches, project anchors, and Git changes.
-3. Prefer compact high-signal files when scores tie.
-4. Extract line windows around task terms for oversized files.
-5. Redact secrets, then assemble the brief within the requested budget.
-
-There is no hidden network request and no index to keep fresh. Run the same command against the same working tree and you get the same brief.
-
-## Security notes
-
-Redaction is a safety net, not a formal secret scanner. Always review a brief before sharing it outside your machine. ScoutCTX skips binary files and symlinks, caps the bytes read from any one file, and enables redaction by default. Use `--no-redact` only for a destination you trust.
-
-Please report suspected vulnerabilities through the process in [SECURITY.md](SECURITY.md).
+See [SECURITY.md](SECURITY.md) for reporting and trust boundaries.
 
 ## Development
 
@@ -146,19 +223,24 @@ Please report suspected vulnerabilities through the process in [SECURITY.md](SEC
 git clone https://github.com/mnabid05/scoutctx.git
 cd scoutctx
 python -m pip install -e .
-python -m unittest discover -s tests -v
+PYTHONPATH=src python -m unittest discover -s tests -v
+PYTHONPATH=src python -m scoutctx "improve ranking" --budget 1000
 ```
 
-The project deliberately keeps its runtime dependency count at zero. See [CONTRIBUTING.md](CONTRIBUTING.md) for the design guardrails and contribution workflow.
+Every behavior change needs a standard-library `unittest`. Runtime dependency
+count stays at zero. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Roadmap
 
-- Language-aware symbol boundaries for even sharper excerpts
-- Optional `stdin` mode for issue and pull-request descriptions
-- Shareable ranking profiles for monorepos
-- MCP resource adapter without changing the offline-first core
+- named harness profiles and plugin discovery;
+- reviewed transcript-to-knowledge workflows;
+- remote workers and durable run events;
+- team synchronization, access control, and encrypted stores; and
+- catalog, issue tracker, ownership, and documentation connectors.
 
-If ScoutCTX saves you from another 80,000-token repository dump, consider starring the project—it helps other agent builders find it.
+The local context/session contract is implemented today; hosted collaboration
+features are not. If this is the missing context layer in your agent stack,
+star it and bring a provider or harness adapter.
 
 ## License
 

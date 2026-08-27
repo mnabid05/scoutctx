@@ -12,5 +12,5 @@
 - [ ] New behavior has test coverage
 - [ ] Documentation and changelog are updated when needed
 - [ ] Output stays deterministic and contains no absolute paths
-- [ ] Local-only operation and default secret redaction are preserved
-
+- [ ] The core makes no outbound model/network calls and default redaction is preserved
+- [ ] Context/session contracts remain model-neutral and transport roots remain confined

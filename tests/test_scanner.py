@@ -17,12 +17,17 @@ class ScannerTests(unittest.TestCase):
             (root / "debug.log").write_text("noise", encoding="utf-8")
             (root / "image.bin").write_bytes(b"hello\0world")
             (root / ".gitignore").write_text("*.log\n", encoding="utf-8")
+            (root / ".scoutctx" / "sessions").mkdir(parents=True)
+            (root / ".scoutctx" / "sessions" / "context.md").write_text(
+                "private session state", encoding="utf-8"
+            )
 
             paths = discover_paths(root, use_git=False)
             candidates, _, stats = scan(root, max_file_bytes=4096, use_git=False)
 
             self.assertIn("src/app.py", paths)
             self.assertNotIn("debug.log", paths)
+            self.assertFalse(any(path.startswith(".scoutctx/") for path in paths))
             self.assertEqual([item.path for item in candidates if item.path == "src/app.py"], ["src/app.py"])
             self.assertEqual(stats.skipped_binary, 1)
 
@@ -41,4 +46,3 @@ class ScannerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
