@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "scoutctx"
+version = "0.1.0"
+description = "Task-focused, token-budgeted codebase briefs for AI coding agents."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "ScoutCTX contributors" }]
+keywords = ["ai", "agents", "context", "cli", "developer-tools", "llm"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/mnabid05/scoutctx"
+Issues = "https://github.com/mnabid05/scoutctx/issues"
+Changelog = "https://github.com/mnabid05/scoutctx/blob/main/CHANGELOG.md"
+
+[project.scripts]
+scoutctx = "scoutctx.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scoutctx"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+

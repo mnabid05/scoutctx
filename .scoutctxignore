@@ -1,0 +1,4 @@
+# Generated ScoutCTX briefs should not become input to the next brief.
+context.md
+context.json
+
